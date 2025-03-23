@@ -1,51 +1,42 @@
-import os 
+import os
+import asyncio
 from dotenv import load_dotenv
 import discord 
 from discord.ext import commands 
 
-# load .env variables
+# Load .env variables
 load_dotenv()
 discord_token = os.getenv("discord_token")
 guild_id = int(os.getenv("guild_id"))
-# enable all intents
-intents = discord.Intents.all()
 
-# setup bot with prefix commands
+# Enable all intents
+intents = discord.Intents.all()
+intents.message_content = True  # Required for message-based commands
+
+# Setup bot with prefix commands
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# add a simple !hello command
+# Command to load a cog dynamically
 @bot.command()
-async def hello(ctx):
-    """responds with a greeting"""
-    await ctx.send("Hello <3 !")
+async def load(ctx, extension):
+    await bot.load_extension(f"cogs.{extension}")
 
-# add a simple /hello command
-@bot.tree.command(name="hello", description="say hello!")
-async def slash_hello(interaction: discord.Interaction):
-    await interaction.response.send_message("Haiiii <3 !!!")
+# Command to unload a cog dynamically
+@bot.command()
+async def unload(ctx, extension):
+    await bot.unload_extension(f"cogs.{extension}")
 
-# add a /ping command 
-@bot.tree.command(name="ping",description="ping pong")
-async def pingpong(interaction: discord.Interaction):
-    await interaction.response.send_message("pong")
-
-# add a /info command 
-@bot.tree.command(name="info", description="give info about the bot")
-async def infobot(interaction : discord.Interaction):
-    #app_info = bot.application.owner
-    await interaction.response.send_message(f"{bot.application.owner} {bot.user} {bot.activity} {bot.status}")
-
-# add a /say command
-@bot.tree.command(name="say", description="repeats the message the user gives")
-@discord.app_commands.describe(message="The message you want the bot to repeat")
-async def say(interaction: discord.Interaction, message:str):
-    await interaction.response.send_message(message)
-
-# register and update slash commands with discord
+# Event triggered when the bot is ready
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
+    await bot.tree.sync()  # Syncs slash commands
     print(f"✅ Logged in as {bot.user} and synced commands!")
 
-# run the bot
-bot.run(discord_token)
+# Main async function to load cogs and run the bot
+async def main():
+    async with bot:
+        await bot.load_extension("cogs.moderation")  # Auto-load the moderation cog
+        await bot.start(discord_token)
+
+# Run the bot properly with asyncio
+asyncio.run(main())
